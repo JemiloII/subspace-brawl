@@ -59,9 +59,15 @@ EMP, Grow, Bounty, Missile Supply, and cosmetics (trails, shield skins, death ex
 - **Deep Space**: the classic sky, rocks, a quarter of them ice.
 - **Over Earth**: satellites drift by and break apart; with hard bots some carry turrets.
 - **Lunar Surface**: more and bigger rocks, far more meteor showers.
+- **Over Mercury**: no ice, charred rocks, more meteor showers.
+- **Over Venus**: Acid Storms, no ice.
 - **Over Mars**: red rocks and Dust Storms.
+- **Ceres**: the asteroid belt, twice the rocks, every size.
 - **Over Jupiter**: radiation fields keep opening.
 - **Saturn's Rings**: mostly ice, ice showers more often.
+- **Over Uranus**: mostly ice, ice showers more often.
+- **Over Neptune**: Supersonic Winds full of ice.
+- **Over Pluto**: almost every rock is ice.
 - **Near the Sun**: Solar Flares sweep fire across the fight.
 
 ## API

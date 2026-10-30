@@ -11,13 +11,17 @@ serve one). Use the desktop app for bots and plugins.
 ## Versions
 
 The API is versioned on its own, separately from the game (game `0.9.x` until the Steam launch = `1.0.0`):
-- **API version** (now **1.2.0**): `GET /api/v1/version` → `{ "game": "0.9.0", "api": "1.2.0", "devTools": false }`
+- **API version** (now **1.4.0**): `GET /api/v1/version` → `{ "game": "0.9.0", "api": "1.4.0", "devTools": false }`
   (`devTools`: a dev build, see "Dev builds only" below); the MCP server reports
   it too. **Major** = the `/api/vN` path: a breaking change gets `/api/v2` (v1 keeps working for a while).
   **Minor** = something new (a route, a field, an MCP tool, an event). **Patch** = a fix or a docs correction.
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.5.0**: view settings: `POST /camera/mirror` (the host's camera + mouse for mirrored views), `round.overlay.mirror`
+  and `round.overlay.coViews` (a co-streamer's music / volume / mirror).
+- **1.4.0**: streamers' cameras: `POST /camera/co-pilot`, `round.overlay.cams`; `/camera/follow` takes `boss:<pilot>`.
+- **1.3.0**: streamers fly bosses: settings `bossPilots` (`ai` / `streamers`) and `coPilots`, `POST /bosses/pilot`.
 - **1.2.0**: content packs: `state.packs`, `pack` / `packName` / `owned` on `GET /bosses` designs, `GET /fields` + MCP
   `list_fields`; a boss / field from a pack the channel doesn't own is refused (400: "Phantom is in Boss Pack 2");
   `boss.warning` `pack` and boss status `teaser`; `devTools` in `/version`. Dev builds only (404 / no tool in a
@@ -41,9 +45,10 @@ Keep the key secret: it can change every setting and run the show.
 Request and response bodies are JSON.
 
 **Content packs.** Bosses and fields come in packs: the free base game (Leviathan, Crimson Manta, Iron Bastion,
-Lumen Spire; Deep Space, Over Earth, Lunar Surface), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
-Magnetar), **Boss Pack 2** (`bossPack2`: Singularity, Phantom, Seraph, Maelstrom), **Arena Pack** (`arenaPack`: Over
-Mars, Over Jupiter, Saturn's Rings, Near the Sun). Picking a boss or field from a pack the channel doesn't own
+Lumen Spire; Deep Space, Over Earth, Lunar Surface, Ceres, Over Pluto), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
+Magnetar), **Boss Pack 2** (`bossPack2`: Singularity, Phantom, Seraph, Maelstrom), **Inner Sol System** (`arenaPack`: Near
+the Sun, Over Mercury, Over Venus, Over Mars), **Gas Giants** (`arenaPack2`: Over Jupiter, Saturn's Rings, Over
+Uranus, Over Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto). Picking a boss or field from a pack the channel doesn't own
 (`PATCH /settings`, `POST /field`, `POST /bosses`, MCP) is a 400 naming the pack; `random` only picks owned ones
 (a random encounter or random BOSS-mode boss is now and then a *teaser* from an unowned pack: it fights normally and
 says its pack).
@@ -69,15 +74,18 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | POST | `/killlist/board` | `{board}` (`lives` / `kills`) | Free-for-all stock: the in-game kill list shows lives left (default) or kills |
 | POST | `/trails/test` | | ⚙ Every flying pilot gets a random special trail for 5 minutes (testing) |
 | POST | `/cosmetics/test` | `{ "kind": "laser" }` (optional) | ⚙ Every flying pilot gets a random trail, shield skin, death explosion and laser skin for 5 minutes (testing); `kind` (`trail` / `shield` / `explosion` / `laser`) = just that one |
-| POST | `/camera/follow` | `{id}` (null = stop) | Every view's camera follows this pilot (`round.overlay.follow`) |
+| POST | `/camera/follow` | `{id}` (null = stop) | Every view's camera follows this pilot (`round.overlay.follow`); `boss:<pilot>` = a streamer's boss (`host` or a co-streamer's name) |
+| POST | `/camera/co-pilot` | `{name, cam}` | A co-streamer's camera (their pilot tab and their `?for=<name>` OBS link): `auto`, `host` (the host's camera) or `boss:<pilot>`; null = their own boss (`round.overlay.cams`) |
+| POST | `/camera/mirror` | `{x, y, w, h, px, py}` | The host window's camera (middle `x, y`, world `w × h` shown) and mouse (`px, py` 0–1 of its screen, null = off it), sent ~10× a second; views with mirror on (`?mirror=on`) copy it (`round.overlay.mirror`, null after 3 s unheard) |
 | POST | `/music/beat` | `{bpm, beatAt}` (`{}` = no music) | The host window's music beat (`beatAt` = wall-clock ms of a beat); every view's notes shield pulses to it (`round.overlay.music`, null after 75 s unrefreshed) |
 | POST | `/results/close` | | After a round: close the results board (it stays up until this) and show the lobby |
-| POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `blizzard` (a Dust Storm over Mars), `solarFlare` (random picks it only Near the Sun) |
-| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mars`, `jupiter`, `saturn`, `sun`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
+| POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `blizzard` (a Dust Storm over Mars, an Acid Storm over Venus, Supersonic Winds over Neptune), `solarFlare` (random picks it only Near the Sun) |
+| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
 | GET | `/fields` | | `{ field, setting, fields: [{ id, name, pack, packName, owned }] }` |
 | POST | `/nukes` | `{ "by": "name" }` | A nuke near the fight, never on a team base: 3 s warning, then it vaporizes everything within 450 (`by`, optional: the pilot who gets its kills) |
 | GET | `/bosses` | | The bosses in the fight (`name`, `role`, `phase`: `warning` / `entering` / `fighting` / `leaving` / `down`, `hp`: `Good` / `Fair` / `Low` only, `shield`: `up` / `down`, `rage` ×1–6, `livesLeft` (Fleet Reserves encounters), `leavesIn` s (Factions encounters), `teaser`: a pack's name when it's a random pick from a pack the channel doesn't own) and every boss design (`name`, `role`, `entrance`, `pack`, `packName`, `owned`) |
 | POST | `/bosses` | `{ "boss": "Hydra" }` | Call a boss into the round now (a design name or `random` = an owned one): WARNING, its entrance, then it fights until shot down; at most 3 at once; a boss from a pack the channel doesn't own = 400 |
+| POST | `/bosses/pilot` | `{ "move": [1, 0], "aim": { "x": 900, "y": 400 }, "fire": true, "skill": 0 }` | The streamer's boss controls (BOSS mode, setting `bossPilots: "streamers"`): move x / y −1…1, aim = a world spot (turrets fire there while `fire`; abilities go after the pilot nearest it), `skill` = an ability slot to fire (on its cooldown). Send it while flying; 10 s without = the AI flies it |
 | POST | `/strikes` | `{ "count": 3, "by": "name" }` | Orbital strikes on random ships (like a cheer) |
 | POST | `/bounties` | `{ "target": "name", "stacks": 1, "by": "name" }` | Bounty on a pilot (stacks add up) |
 
@@ -104,7 +112,8 @@ The game starts on its title screen. Menu pages show on every overlay (desktop a
 
 Effect ids: `calamity:random`, `calamity:meteorShower`, `calamity:iceStorm` (Ice Shower; the id kept its old name),
 `calamity:thunderStorm`, `calamity:blackHole`, `calamity:radiationLeak`, `calamity:blizzard`, `nuke`, `mines` (mine supply: +3 mine charges, over the max), `emp`, `grow`, `bounty` (input = target name), `trail` (input = style: rainbow, fire, neon, sparkler, galaxy, stars, hearts, confetti, snow, bubbles, notes,
-smoke, pixels; Halloween: pumpkins, ghosts, bats, toxic, scythe; Christmas: bells, candycanes, gingerbread,
+smoke, pixels; Halloween: pumpkins, ghosts, bats, toxic, scythe,
+spider; Christmas: bells, candycanes, gingerbread,
 ornaments; usb; `halloween` / `christmas` = a random one of those), `shield` (shield skin,
 input = the same themes), `explosion` (death explosion, input = the same themes; the pilot's missiles and mines blow up
 in it too), `laser` (laser skin for the pilot's shots, input = rainbow, fire, plasma, hearts, carrots, snowballs,
@@ -237,12 +246,14 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `camera` | `auto`, `map`, `zoom` |
 | `cameraZoom` | 0.1–2 |
 | `scoreboard` | `left`, `right` |
+| `language` | `""` (default: the system's language) or a language code from `panels/src/i18n/languages.ts` (`es`, `ja`, `he`...): the game's text on the host and every view |
 | `pieCorner` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
 | `pieSize` | 80–1000 |
 | `pieOffsetX`, `pieOffsetY` | -2000–2000 |
 | `calamities` | boolean (natural calamities) |
 | `season` | `auto` (default: by the server's date, Halloween Sep 24 – Nov 7, Christmas Nov 24 – Jan 7), `off`, `halloween`, `christmas` (forced on) |
-| `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mars`, `jupiter`, `saturn`, `sun`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
+| `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
+| `fieldPool` | Field ids `random` rolls from (`[]` = default: every owned field). Unowned ids are skipped; none owned = every owned field; a narrowed pool never rolls a DLC teaser |
 | `missileFriendlyFire` | boolean |
 | `trailMinutes` | 1–600 |
 | `redeemLinks` | `{ rewardId: effectId }` (prefer the `/redeems/links` routes) |
@@ -273,6 +284,7 @@ Every event has `type` and `at` (ms timestamp).
 | `giant-emote` | `user`, `emote` (id): a giantified emote flew in as an asteroid |
 | `cheer` | `user`, `bits`, `text` |
 | `bits` | `user` (login or null), `bits`, `calamity`: a viewer bought a calamity with Bits in the Twitch extension |
+| `store.bought` | `userId` (Twitch), `item` (store item id), `itemName`: a viewer bought a ship or bling with Bits in the Twitch extension |
 | `redeem` | `title`, `rewardId`, `effect` (null: not a game redeem), `user`, `input` |
 | `effect` | `effect`, `pilot` (applied through the API) |
 | `announce` | `text` |

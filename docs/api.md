@@ -53,7 +53,7 @@ Uranus, Over Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, 
 (a random encounter or random BOSS-mode boss is now and then a *teaser* from an unowned pack: it fights normally and
 says its pack).
 
-**Dev builds only** (marked ⚙): routes that hand out effects or cosmetics without a redeem. A release build doesn't
+**Dev builds only** (marked "(dev)"): routes that hand out effects or cosmetics without a redeem. A release build doesn't
 contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says `devTools`.
 
 ### Game
@@ -72,8 +72,8 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | PUT | `/bots/:login/image` | `{data}` (data: URL, ≤ 2 MB) | A named bot's picture → `{path}` for its `image` |
 | POST | `/results/board` | `{board}` (`kills` / `out` / `damage`) | The end screen's board: kills, knockout order (stock battles' default) or damage to the bosses (BOSS mode's default) |
 | POST | `/killlist/board` | `{board}` (`lives` / `kills`) | Free-for-all stock: the in-game kill list shows lives left (default) or kills |
-| POST | `/trails/test` | | ⚙ Every flying pilot gets a random special trail for 5 minutes (testing) |
-| POST | `/cosmetics/test` | `{ "kind": "laser" }` (optional) | ⚙ Every flying pilot gets a random trail, shield skin, death explosion and laser skin for 5 minutes (testing); `kind` (`trail` / `shield` / `explosion` / `laser`) = just that one |
+| POST | `/trails/test` | | (dev) Every flying pilot gets a random special trail for 5 minutes (testing) |
+| POST | `/cosmetics/test` | `{ "kind": "laser" }` (optional) | (dev) Every flying pilot gets a random trail, shield skin, death explosion and laser skin for 5 minutes (testing); `kind` (`trail` / `shield` / `explosion` / `laser`) = just that one |
 | POST | `/camera/follow` | `{id}` (null = stop) | Every view's camera follows this pilot (`round.overlay.follow`); `boss:<pilot>` = a streamer's boss (`host` or a co-streamer's name) |
 | POST | `/camera/co-pilot` | `{name, cam}` | A co-streamer's camera (their pilot tab and their `?for=<name>` OBS link): `auto`, `host` (the host's camera) or `boss:<pilot>`; null = their own boss (`round.overlay.cams`) |
 | POST | `/camera/mirror` | `{x, y, w, h, px, py}` | The host window's camera (middle `x, y`, world `w × h` shown) and mouse (`px, py` 0–1 of its screen, null = off it), sent ~10× a second; views with mirror on (`?mirror=on`) copy it (`round.overlay.mirror`, null after 3 s unheard) |
@@ -91,7 +91,7 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 
 ### Menus
 
-The game starts on its title screen. Menu pages show on every overlay (desktop and vertical) at once.
+The game starts on its title screen. Menu pages show on every game view (desktop and vertical) at once.
 
 | Method | Path | Body | Does |
 |---|---|---|---|
@@ -108,7 +108,7 @@ The game starts on its title screen. Menu pages show on every overlay (desktop a
 | POST | `/pilots` | `{ "username": "twitchlogin" }` | Put a viewer in the game (as `!join`) |
 | POST | `/pilots/:name/abilities` | `{ "ability": "missile" }` | `missile`, `shields`, `ram` (old name `boost` still works), `retreat`, `mine` (`mines` works too; drops one if charged) |
 | GET | `/effects` | | Every effect: `[{ id, label, needsPilot }]` |
-| POST | `/effects` | `{ "effect": "grow", "pilot": "name", "input": "", "by": "name" }` | ⚙ Apply an effect, as if redeemed |
+| POST | `/effects` | `{ "effect": "grow", "pilot": "name", "input": "", "by": "name" }` | (dev) Apply an effect, as if redeemed |
 
 Effect ids: `calamity:random`, `calamity:meteorShower`, `calamity:iceStorm` (Ice Shower; the id kept its old name),
 `calamity:thunderStorm`, `calamity:blackHole`, `calamity:radiationLeak`, `calamity:blizzard`, `nuke`, `mines` (mine supply: +3 mine charges, over the max), `emp`, `grow`, `bounty` (input = target name), `trail` (input = style: rainbow, fire, neon, sparkler, galaxy, stars, hearts, confetti, snow, bubbles, notes,
@@ -125,7 +125,7 @@ Effects with `needsPilot` need a `pilot` who is flying right now.
 
 | Method | Path | Body | Does |
 |---|---|---|---|
-| POST | `/overlay/announce` | `{ "text": "GG!", "color": "#35e0ff", "seconds": 6 }` | Banner on the overlay (text ≤ 120, seconds 1–120) |
+| POST | `/overlay/announce` | `{ "text": "GG!", "color": "#35e0ff", "seconds": 6 }` | Banner on the game (text ≤ 120, seconds 1–120) |
 | POST | `/overlay/screen` | `{ "screen": "leaderboard", "seconds": 15 }` | Show a screen over the fight; `"game"` goes back |
 
 Screens: `game`, `leaderboard` (today / week / month boards).
@@ -214,7 +214,7 @@ shared lives). A saved `supernova` (removed) loads as `boss`. A boss's HP is nev
 `Low` (the thirds). A pilot's `damage` (and `dmg` in round stats) = what their hits on bosses and boss craft were
 worth this round (raw hits, shields and all, nothing for a raised dome): pilots' numbers, never the boss's HP.
 Calamities run in `boss` rounds too (bosses aren't pulled, pushed or hurt by them).
-`phase` is `lobby` between rounds, `playing` during one. `field` is where the round is fought (Fields.ts id; in a lobby the next round's, already rolled
+`phase` is `lobby` between rounds, `playing` during one. `field` is where the round is fought (content/data/fields.ts id; in a lobby the next round's, already rolled
 when the setting is `random`; also `lobby.field`).
 A pilot's `ship` is its ship's key : `spaceShips_001.png`…`spaceShips_008.png` for
 the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
@@ -246,7 +246,8 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `camera` | `auto`, `map`, `zoom` |
 | `cameraZoom` | 0.1–2 |
 | `scoreboard` | `left`, `right` |
-| `language` | `""` (default: the system's language) or a language code from `panels/src/i18n/languages.ts` (`es`, `ja`, `he`...): the game's text on the host and every view |
+| `lobbySide` | `left`, `right` (the lobby's settings column; MENU takes the other side) |
+| `language` | `""` (default: the system's language) or a language code from `content/data/languages.ts` (`es`, `ja`, `he`...): the game's text on the host and every view |
 | `pieCorner` | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
 | `pieSize` | 80–1000 |
 | `pieOffsetX`, `pieOffsetY` | -2000–2000 |
@@ -315,7 +316,7 @@ Streamable HTTP, stateless, same API key. Tools:
 | Tool | Args |
 |---|---|
 | `get_state`, `get_leaderboards`, `list_fields`, `list_redeem_rewards` | |
-| `list_effects` ⚙ | |
+| `list_effects` (dev) | |
 | `update_settings` | `settings` object |
 | `open_main_menu` | |
 | `open_lobby` | `mode?` |
@@ -329,8 +330,8 @@ Streamable HTTP, stateless, same API key. Tools:
 | `spawn_boss` | `boss?` (a name, or random) |
 | `boss_status` | (HP as Good / Fair / Low only) |
 | `place_bounty` | `target`, `stacks?` |
-| `apply_effect` ⚙ | `effect`, `pilot?`, `input?` |
-| `test_cosmetics` ⚙ | `kind?` (`trail` / `shield` / `explosion` / `laser`; none = all four) |
+| `apply_effect` (dev) | `effect`, `pilot?`, `input?` |
+| `test_cosmetics` (dev) | `kind?` (`trail` / `shield` / `explosion` / `laser`; none = all four) |
 | `use_ability` | `pilot`, `ability` |
 | `add_pilot` | `username` |
 | `announce` | `text`, `color?`, `seconds?` |

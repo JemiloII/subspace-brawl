@@ -95,7 +95,7 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 
 | Method | Path | Body | Does |
 |---|---|---|---|
-| POST | `/menu` | | Back to the title screen (a round in progress stops; pilots stay joined) |
+| POST | `/menu` | `{ "page": "modes" }` (optional) | Back to the title screen, or to that menu screen (a round in progress stops; pilots stay joined) |
 | POST | `/lobby` | `{ "mode": "ffa" }` | From the title screen: open that mode's lobby. In a lobby or round: swap the next mode, pilots stay |
 | POST | `/menu/page` | `{ "page": "boards" }` | Show a screen: `main` (title), `modes`, `boards`, `credits`; `null` closes it |
 
@@ -230,8 +230,8 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `fleetSize` | 1–999 (Fleet Reserves) |
 | `ffaLives` | 1–20 (FFA Reserves) |
 | `boss` | `random` or a boss name (BOSS mode's boss) |
-| `bossLives` | 1–20 (BOSS mode: shared lives per pilot, default 5) |
-| `bossMinutes` | `0` (∞), 3, 4, 5, 6, 8, 10, 15, 20 (BOSS mode's clock, default 6) |
+| `bossLives` | 1–20, or `0` (∞: unlimited lives, only with a `bossMinutes` time limit; with no limit it falls back to 10) (BOSS mode: shared lives per pilot, default 10) |
+| `bossMinutes` | `0` (∞), 3, 4, 5, 6, 8, 10, 15, 20 (BOSS mode's clock, default 0) |
 | `bots` | 0–500 (filler bots: Bot 1, Bot 2…) |
 | `windowMode` | `borderless` (default) / `fullscreen` / `windowed`: the desktop app's window |
 | `soundMaster`, `musicVolume`, `lobbyMusicVolume` | 0–100 (host window: everything, battle music, menu & lobby music; defaults 100, 20, 20) |

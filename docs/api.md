@@ -45,10 +45,10 @@ Keep the key secret: it can change every setting and run the show.
 Request and response bodies are JSON.
 
 **Content packs.** Bosses and fields come in packs: the free base game (Leviathan, Crimson Manta, Iron Bastion,
-Lumen Spire; Deep Space, Over Earth, Lunar Surface, Ceres, Over Pluto), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
+Lumen Spire; Deep Space, Earth, Lunar Surface, Ceres, Pluto), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
 Magnetar), **Boss Pack 2** (`bossPack2`: Singularity, Phantom, Seraph, Maelstrom), **Inner Sol System** (`arenaPack`: Near
-the Sun, Over Mercury, Over Venus, Over Mars), **Gas Giants** (`arenaPack2`: Over Jupiter, Saturn's Rings, Over
-Uranus, Over Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto). Picking a boss or field from a pack the channel doesn't own
+the Sun, Mercury, Venus, Mars), **Gas Giants** (`arenaPack2`: Jupiter, Saturn's Rings, Over
+Uranus, Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto). Picking a boss or field from a pack the channel doesn't own
 (`PATCH /settings`, `POST /field`, `POST /bosses`, MCP) is a 400 naming the pack; `random` only picks owned ones
 (a random encounter or random BOSS-mode boss is now and then a *teaser* from an unowned pack: it fights normally and
 says its pack).

@@ -18,6 +18,8 @@ The API is versioned on its own, separately from the game (game `0.9.x` until th
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.6.0**: the host's auto-camera zoom: `POST /camera/zoom`, `round.overlay.zoomBias`; co-streamers' boss picks and
+  colors: `round.overlay.bossPicks`, `round.overlay.pilotColors`, boss `pc`.
 - **1.5.0**: view settings: `POST /camera/mirror` (the host's camera + mouse for mirrored views), `round.overlay.mirror`
   and `round.overlay.coViews` (a co-streamer's music / volume / mirror).
 - **1.4.0**: streamers' cameras: `POST /camera/co-pilot`, `round.overlay.cams`; `/camera/follow` takes `boss:<pilot>`.
@@ -75,6 +77,7 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | POST | `/trails/test` | | (dev) Every flying pilot gets a random special trail for 5 minutes (testing) |
 | POST | `/cosmetics/test` | `{ "kind": "laser" }` (optional) | (dev) Every flying pilot gets a random trail, shield skin, death explosion and laser skin for 5 minutes (testing); `kind` (`trail` / `shield` / `explosion` / `laser`) = just that one |
 | POST | `/camera/follow` | `{id}` (null = stop) | Every view's camera follows this pilot (`round.overlay.follow`); `boss:<pilot>` = a streamer's boss (`host` or a co-streamer's name) |
+| POST | `/camera/zoom` | `{bias}` | The host's zoom on the auto camera: × the zoom it picks, 0.5–2 (1 = its own), the same on every view (`round.overlay.zoomBias`) |
 | POST | `/camera/co-pilot` | `{name, cam}` | A co-streamer's camera (their pilot tab and their `?for=<name>` OBS link): `auto`, `host` (the host's camera) or `boss:<pilot>`; null = their own boss (`round.overlay.cams`) |
 | POST | `/camera/mirror` | `{x, y, w, h, px, py}` | The host window's camera (middle `x, y`, world `w × h` shown) and mouse (`px, py` 0–1 of its screen, null = off it), sent ~10× a second; views with mirror on (`?mirror=on`) copy it (`round.overlay.mirror`, null after 3 s unheard) |
 | POST | `/music/beat` | `{bpm, beatAt}` (`{}` = no music) | The host window's music beat (`beatAt` = wall-clock ms of a beat); every view's notes shield pulses to it (`round.overlay.music`, null after 75 s unrefreshed) |

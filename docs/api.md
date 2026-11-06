@@ -18,6 +18,8 @@ The API is versioned on its own, separately from the game (game `0.9.x` until th
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.7.0**: `GET /redeems/rewards` rewards carry `autoEffect` (the effect the title's keywords pick while unlinked,
+  or null).
 - **1.6.0**: the host's auto-camera zoom: `POST /camera/zoom`, `round.overlay.zoomBias`; co-streamers' boss picks and
   colors: `round.overlay.bossPicks`, `round.overlay.pilotColors`, boss `pc`.
 - **1.5.0**: view settings: `POST /camera/mirror` (the host's camera + mouse for mirrored views), `round.overlay.mirror`
@@ -47,10 +49,10 @@ Keep the key secret: it can change every setting and run the show.
 Request and response bodies are JSON.
 
 **Content packs.** Bosses and fields come in packs: the free base game (Leviathan, Crimson Manta, Iron Bastion,
-Lumen Spire; Deep Space, Earth, Lunar Surface, Ceres, Pluto), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
+Lumen Spire; Deep Space, Earth, Lunar Surface, Ceres, Pluto, 67P, Vesta, 'Oumuamua), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
 Magnetar), **Boss Pack 2** (`bossPack2`: Singularity, Phantom, Seraph, Maelstrom), **Inner Sol System** (`arenaPack`: Near
 the Sun, Mercury, Venus, Mars), **Gas Giants** (`arenaPack2`: Jupiter, Saturn's Rings, Over
-Uranus, Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto). Picking a boss or field from a pack the channel doesn't own
+Uranus, Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto), **Moons of Saturn** (`saturnMoonsPack`: Titan, Enceladus, Mimas, Iapetus). Picking a boss or field from a pack the channel doesn't own
 (`PATCH /settings`, `POST /field`, `POST /bosses`, MCP) is a 400 naming the pack; `random` only picks owned ones
 (a random encounter or random BOSS-mode boss is now and then a *teaser* from an unowned pack: it fights normally and
 says its pack).
@@ -82,8 +84,8 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | POST | `/camera/mirror` | `{x, y, w, h, px, py}` | The host window's camera (middle `x, y`, world `w × h` shown) and mouse (`px, py` 0–1 of its screen, null = off it), sent ~10× a second; views with mirror on (`?mirror=on`) copy it (`round.overlay.mirror`, null after 3 s unheard) |
 | POST | `/music/beat` | `{bpm, beatAt}` (`{}` = no music) | The host window's music beat (`beatAt` = wall-clock ms of a beat); every view's notes shield pulses to it (`round.overlay.music`, null after 75 s unrefreshed) |
 | POST | `/results/close` | | After a round: close the results board (it stays up until this) and show the lobby |
-| POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `blizzard` (a Dust Storm over Mars, an Acid Storm over Venus, Supersonic Winds over Neptune), `solarFlare` (random picks it only Near the Sun) |
-| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
+| POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `deepFreeze` (a spreading freeze zone), `blizzard` (a Dust Storm over Mars, an Acid Storm over Venus, Supersonic Winds over Neptune), `solarFlare` (random picks it only Near the Sun) |
+| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
 | GET | `/fields` | | `{ field, setting, fields: [{ id, name, pack, packName, owned }] }` |
 | POST | `/nukes` | `{ "by": "name" }` | A nuke near the fight, never on a team base: 3 s warning, then it vaporizes everything within 450 (`by`, optional: the pilot who gets its kills) |
 | GET | `/bosses` | | The bosses in the fight (`name`, `role`, `phase`: `warning` / `entering` / `fighting` / `leaving` / `down`, `hp`: `Good` / `Fair` / `Low` only, `shield`: `up` / `down`, `rage` ×1–6, `livesLeft` (Fleet Reserves encounters), `leavesIn` s (Factions encounters), `teaser`: a pack's name when it's a random pick from a pack the channel doesn't own) and every boss design (`name`, `role`, `entrance`, `pack`, `packName`, `owned`) |
@@ -114,13 +116,14 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 | POST | `/effects` | `{ "effect": "grow", "pilot": "name", "input": "", "by": "name" }` | (dev) Apply an effect, as if redeemed |
 
 Effect ids: `calamity:random`, `calamity:meteorShower`, `calamity:iceStorm` (Ice Shower; the id kept its old name),
-`calamity:thunderStorm`, `calamity:blackHole`, `calamity:radiationLeak`, `calamity:blizzard`, `nuke`, `mines` (mine supply: +3 mine charges, over the max), `emp`, `grow`, `bounty` (input = target name), `trail` (input = style: rainbow, fire, neon, sparkler, galaxy, stars, hearts, confetti, snow, bubbles, notes,
+`calamity:thunderStorm`, `calamity:blackHole`, `calamity:radiationLeak`, `calamity:deepFreeze`, `calamity:blizzard`, `nuke`, `mines` (mine supply: +3 mine charges, over the max), `emp`, `grow`, `bounty` (input = target name), `trail` (input = style: rainbow, fire, neon, sparkler, galaxy, stars, hearts, confetti, snow, bubbles, notes,
 smoke, pixels; Halloween: pumpkins, ghosts, bats, toxic, scythe,
 spider; Christmas: bells, candycanes, gingerbread,
-ornaments; usb; `halloween` / `christmas` = a random one of those), `shield` (shield skin,
+ornaments; usb; bee; Chinese New Year: dragon, lanterns, firecrackers; `halloween` / `christmas` /
+`chinesenewyear` (or `cny`, `lunar`) = a random one of those), `shield` (shield skin,
 input = the same themes), `explosion` (death explosion, input = the same themes; the pilot's missiles and mines blow up
 in it too), `laser` (laser skin for the pilot's shots, input = rainbow, fire, plasma, hearts, carrots, snowballs,
-candycanes, pumpkins, bubbles, notes, stars, pixels), `missiles`. Unknown input (an emoji or emote too) = a
+candycanes, pumpkins, bubbles, notes, stars, pixels, bee, dragon, lanterns, firecrackers), `missiles`. Unknown input (an emoji or emote too) = a
 random one; each lasts `trailMinutes`. `missiles` = +3 missile charges, over the max.
 Effects with `needsPilot` need a `pilot` who is flying right now.
 
@@ -137,7 +140,7 @@ Screens: `game`, `leaderboard` (today / week / month boards).
 
 | Method | Path | Body | Does |
 |---|---|---|---|
-| GET | `/redeems/rewards` | | The channel's rewards `[{ id, title, cost, needsInput, enabled }]` |
+| GET | `/redeems/rewards` | | The channel's rewards `[{ id, title, cost, needsInput, enabled, autoEffect }]` |
 | GET | `/redeems/links` | | `{ rewardId: effectId }` |
 | PUT | `/redeems/links/:rewardId` | `{ "effect": "emp" }` | Link a reward to an effect |
 | DELETE | `/redeems/links/:rewardId` | | Unlink it |
@@ -173,8 +176,11 @@ input, bits }`. Game-event runs get that event's fields (as in the events table)
 `trigger` (`event`, or `test`) and `at`, except these two, reshaped for scripts:
 
 - `round.end`: `{ mode, modeName, result, winnerTeam ("Red"… or null), winners: [row], players: [row] (results order,
-  winners first), bitLeaders: [{ name, bits }], startedAt, endedAt, durationSeconds }`; row = `{ place, name, login
-  (null: bot), bot, team (name or null), won, kills, deaths, assists, friendlyKills, damage, lastShots }`.
+  winners first), boards: { kills, damage, knockout } (the results screen's boards: most kills, most boss damage,
+  last standing first; `place` = rank on that board), bitLeaders: [{ name, bits }], startedAt, endedAt,
+  durationSeconds }`; row = `{ place, name, login (null: bot), bot, team (name or null), won, kills, deaths, assists,
+  friendlyKills, damage, lastShots, knockedOutAt (ms, null: still flying) }`. Last 3 standing:
+  `event.boards.knockout.slice(0, 3)`; top 3 killers: `event.boards.kills.slice(0, 3)`.
 - `round.start`: `{ mode, modeName, pilots (count), teams: [names], roster: [{ name, login, bot, team }], field,
   fieldName }`.
 
@@ -255,8 +261,8 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `pieSize` | 80–1000 |
 | `pieOffsetX`, `pieOffsetY` | -2000–2000 |
 | `calamities` | boolean (natural calamities) |
-| `season` | `auto` (default: by the server's date, Halloween Sep 24 – Nov 7, Christmas Nov 24 – Jan 7), `off`, `halloween`, `christmas` (forced on) |
-| `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
+| `season` | `auto` (default: by the server's date, Halloween Sep 24 – Nov 7, Christmas Nov 24 – Jan 7, Chinese New Year from 7 days before the Lunar New Year to the Lantern Festival, by a table of dates through 2050), `off`, `halloween`, `christmas`, `chineseNewYear` (forced on) |
+| `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
 | `fieldPool` | Field ids `random` rolls from (`[]` = default: every owned field). Unowned ids are skipped; none owned = every owned field; a narrowed pool never rolls a DLC teaser |
 | `missileFriendlyFire` | boolean |
 | `trailMinutes` | 1–600 |

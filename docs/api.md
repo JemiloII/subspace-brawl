@@ -11,13 +11,20 @@ serve one). Use the desktop app for bots and plugins.
 ## Versions
 
 The API is versioned on its own, separately from the game (game `0.9.x` until the Steam launch = `1.0.0`):
-- **API version** (now **1.4.0**): `GET /api/v1/version` → `{ "game": "0.9.0", "api": "1.4.0", "devTools": false }`
+- **API version** (now **1.8.0**): `GET /api/v1/version` → `{ "game": "0.18.0", "api": "1.8.0", "devTools": false }`
   (`devTools`: a dev build, see "Dev builds only" below); the MCP server reports
   it too. **Major** = the `/api/vN` path: a breaking change gets `/api/v2` (v1 keeps working for a while).
   **Minor** = something new (a route, a field, an MCP tool, an event). **Patch** = a fix or a docs correction.
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.8.0**: ultimates: setting `ultimates`, `POST /pilots/:name/ult` and `/pilots/:name/ult/charge`, pilots' `ult` +
+  `ultMeter` in `/state`, `round.ultimates` + `round.ultCalls`, events `ult` and `ult.charged`, MCP `fire_ult` and
+  `charge_ult`, kill feed cause `ult`.
+  Also settings `hangarCommand` (`!hangar` answers with the store link) and `storeCard` (the store link takes
+  turns in the lobby's rules line, the HUD's commands line and the results; snapshot `round.storeCard`); Field Change for Bits: a `fieldChange` line among `round.calamities` (`field` =
+  the field id, `by`), event `effect` with `effect: "fieldChange"`, `field`, `by`; `bits` events' `calamity` can be
+  `fieldChange`. The extension no longer sells store items, so `store.bought` no longer fires.
 - **1.7.0**: `GET /redeems/rewards` rewards carry `autoEffect` (the effect the title's keywords pick while unlinked,
   or null).
 - **1.6.0**: the host's auto-camera zoom: `POST /camera/zoom`, `round.overlay.zoomBias`; co-streamers' boss picks and
@@ -112,6 +119,8 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 |---|---|---|---|
 | POST | `/pilots` | `{ "username": "twitchlogin" }` | Put a viewer in the game (as `!join`) |
 | POST | `/pilots/:name/abilities` | `{ "ability": "missile" }` | `missile`, `shields`, `ram` (old name `boost` still works), `retreat`, `mine` (`mines` works too; drops one if charged) |
+| POST | `/pilots/:name/ult` | `{ "ult": "shockwave" }` (optional) | Fire the pilot's ultimate (as `!ult`): only with a full meter, after a round's first 15 s, while `ultimates` is on; `ult` = one of their unlocked ultimates to use for the rest of the round (else theirs). 400 when it can't fire |
+| POST | `/pilots/:name/ult/charge` | `{ "by": "name" }` (optional) | Fill the pilot's ult meter at once; the HUD says "ULT CHARGED BY NAME" |
 | GET | `/effects` | | Every effect: `[{ id, label, needsPilot }]` |
 | POST | `/effects` | `{ "effect": "grow", "pilot": "name", "input": "", "by": "name" }` | (dev) Apply an effect, as if redeemed |
 
@@ -126,6 +135,11 @@ in it too), `laser` (laser skin for the pilot's shots, input = rainbow, fire, pl
 candycanes, pumpkins, bubbles, notes, stars, pixels, bee, dragon, lanterns, firecrackers), `missiles`. Unknown input (an emoji or emote too) = a
 random one; each lasts `trailMinutes`. `missiles` = +3 missile charges, over the max.
 Effects with `needsPilot` need a `pilot` who is flying right now.
+
+Ultimates (ids for `ult`): free `overdrive`, `barrage`, `aegis`, `shockwave`, `blinkStrike`, `minefield`, `rally`,
+`sanctuary`; in the Ultimates pack (viewers who bought one, in a channel that owns the pack) `orbitalLance`,
+`pocketBlackHole`, `wingmen`, `hiveSwarm`, `confettiFireworks`, `cryoBomb`, `chainLightning`, `meteorCall`, `phantom`,
+`bladeStorm`, `titan`, `gravityWell`. A meter fills in ~75 s, faster from damage dealt and kills; a death keeps half.
 
 ### Overlay
 
@@ -210,7 +224,8 @@ section of the game's docs.
   "pilots": [
     {
       "id": "chat:bob", "name": "bob", "team": 0, "bot": false, "alive": true,
-      "hp": 100, "kills": 3, "deaths": 1, "assists": 2, "damage": 0, "lives": null, "missiles": 1, "mines": 1, "ship": "…"
+      "hp": 100, "kills": 3, "deaths": 1, "assists": 2, "damage": 0, "lives": null, "missiles": 1, "mines": 1, "ship": "…",
+      "ult": "shockwave", "ultMeter": 0.45
     }
   ],
   "settings": { "mode": "dogfight", "…": "…" },
@@ -225,6 +240,12 @@ worth this round (raw hits, shields and all, nothing for a raised dome): pilots'
 Calamities run in `boss` rounds too (bosses aren't pulled, pushed or hurt by them).
 `phase` is `lobby` between rounds, `playing` during one. `field` is where the round is fought (content/data/fields.ts id; in a lobby the next round's, already rolled
 when the setting is `random`; also `lobby.field`).
+`round.rentals` (left out while empty) = bosses unlocked for the channel for 24 h (a Bits summon or a beaten teaser):
+`{ "<boss name>": <until, epoch ms> }`, key `*` = every boss. `round.unlocked` (the results only) = the teasers the
+pilots beat this round, now unlocked.
+`round.ultimates` = the setting; `round.ultCalls` (left out while none) = the big HUD lines of the last 2.6 s:
+`[{ id, u, n, c, t, by? }]` (`u` = index into the ultimate ids above, `n` = pilot, `c` = their color, `t` = ms ago,
+`by` = who paid for an Ult Charge). A pilot's `ult` is this round's ultimate, `ultMeter` 0–1.
 A pilot's `ship` is its ship's key : `spaceShips_001.png`…`spaceShips_008.png` for
 the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 
@@ -265,6 +286,7 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
 | `fieldPool` | Field ids `random` rolls from (`[]` = default: every owned field). Unowned ids are skipped; none owned = every owned field; a narrowed pool never rolls a DLC teaser |
 | `missileFriendlyFire` | boolean |
+| `ultimates` | boolean, default on: ult meters, `!ult`, the extension's ult controls and Ult Charges |
 | `trailMinutes` | 1–600 |
 | `redeemLinks` | `{ rewardId: effectId }` (prefer the `/redeems/links` routes) |
 
@@ -288,17 +310,19 @@ Every event has `type` and `at` (ms timestamp).
 | `boss.spawned` | `boss`, `role`: its entrance is over, it fights |
 | `boss.rage` | `boss`, `rage` (×2–6): it got angrier (lower HP, or its shield broke) |
 | `boss.shield` | `boss`, `shield` (`down`) |
-| `boss.defeated` | `boss`, `by` (the pilot id with the last hit, or null), `livesLeft` (a stock encounter's boss comes back while it has lives) |
+| `boss.defeated` | `boss`, `by` (the pilot id with the last hit, or null), `livesLeft` (a stock encounter's boss comes back while it has lives), `teaserBeaten?` (true: a boss from a pack the channel doesn't own; it's lent to the channel for 24 h) |
+| `boss.summoned` | `boss`, `by` (the viewer's name), `unlock` (`new` / `reset`: the channel didn't own it, now unlocked for 24 h; `all`: every boss unlocked for 24 h; null: owned): a viewer summoned it with Bits in the Twitch extension |
 | `boss.left` | `boss`: a Factions encounter's boss warped out when its time was up |
 | `boss.cheer` | `bits`, then `team` + `lives` (stock: lives for that team) or `seconds` (timed: on the boss's clock) |
 | `giant-emote` | `user`, `emote` (id): a giantified emote flew in as an asteroid |
 | `cheer` | `user`, `bits`, `text` |
-| `bits` | `user` (login or null), `bits`, `calamity`: a viewer bought a calamity with Bits in the Twitch extension |
-| `store.bought` | `userId` (Twitch), `item` (store item id), `itemName`: a viewer bought a ship or bling with Bits in the Twitch extension |
+| `bits` | `user` (login or null), `bits`, `calamity`: a viewer bought a calamity (or `nuke`, `summonBoss`, `ultCharge`, `fieldChange`, `cheerStrike` = a cheer of those bits: strikes, or lives / clock time while a boss is in) with Bits in the Twitch extension |
 | `redeem` | `title`, `rewardId`, `effect` (null: not a game redeem), `user`, `input` |
-| `effect` | `effect`, `pilot` (applied through the API) |
+| `effect` | `effect`, `pilot` (applied through the API); a Bits Field Change: `effect: "fieldChange"`, `field`, `by` |
+| `ult` | `pilot`, `id`, `ult` (id), `name`: a pilot fired their ultimate |
+| `ult.charged` | `pilot`, `by` (who paid, or null): a pilot's ult meter was filled at once |
 | `announce` | `text` |
-| `relay` | `entitlements` (DLC names; connected to the relay) |
+| `relay` | `entitlements` (connected to the relay: pack ids, `all` = every pack, and `rent:<boss>:<until>` = a boss unlocked for the channel until that epoch ms; `rent:*:<until>` = every boss), `packs` (the pack ids owned, rentals aside) |
 | `extension` | `from` (`role`, `userId`, `opaqueUserId`), `message` (a viewer's extension message) |
 
 ```js
@@ -342,6 +366,8 @@ Streamable HTTP, stateless, same API key. Tools:
 | `apply_effect` (dev) | `effect`, `pilot?`, `input?` |
 | `test_cosmetics` (dev) | `kind?` (`trail` / `shield` / `explosion` / `laser`; none = all four) |
 | `use_ability` | `pilot`, `ability` |
+| `fire_ult` | `pilot`, `ult?` |
+| `charge_ult` | `pilot`, `by?` |
 | `add_pilot` | `username` |
 | `announce` | `text`, `color?`, `seconds?` |
 | `show_screen` | `screen`, `seconds?` |

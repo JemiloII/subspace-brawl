@@ -11,13 +11,16 @@ serve one). Use the desktop app for bots and plugins.
 ## Versions
 
 The API is versioned on its own, separately from the game (game `0.9.x` until the Steam launch = `1.0.0`):
-- **API version** (now **1.8.0**): `GET /api/v1/version` → `{ "game": "0.18.0", "api": "1.8.0", "devTools": false }`
+- **API version** (now **1.9.0**): `GET /api/v1/version` → `{ "game": "0.19.0", "api": "1.9.0", "devTools": false }`
   (`devTools`: a dev build, see "Dev builds only" below); the MCP server reports
   it too. **Major** = the `/api/vN` path: a breaking change gets `/api/v2` (v1 keeps working for a while).
   **Minor** = something new (a route, a field, an MCP tool, an event). **Patch** = a fix or a docs correction.
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.9.0**: `POST /pilots/:name/ult/charge` and MCP `charge_ult` take `faction` (fills every meter on the pilot's
+  side); event `ult.charged` adds `pilots`; `round.ultCalls` lines add `side`. Nukes are a missile to a random spot:
+  `round.nukes` lines add `heading` + `range`, the blast and shockwave reach further.
 - **1.8.0**: ultimates: setting `ultimates`, `POST /pilots/:name/ult` and `/pilots/:name/ult/charge`, pilots' `ult` +
   `ultMeter` in `/state`, `round.ultimates` + `round.ultCalls`, events `ult` and `ult.charged`, MCP `fire_ult` and
   `charge_ult`, kill feed cause `ult`.
@@ -50,6 +53,16 @@ The API is versioned on its own, separately from the game (game `0.9.x` until th
 Wrong or missing key → `401`. Bad input → `400 { "error": "…" }`. Anything else failing → `500 { "error": "…" }`.
 
 Keep the key secret: it can change every setting and run the show.
+
+### From another computer
+
+The game only answers on its own PC (`http://localhost:2087`). To let a bot on another computer in, turn on
+**API & MCP → Let bots on other computers use the API** in the streamer menu: the API then also answers on the PC's
+network address, same port (the menu shows the link, e.g. `http://192.168.1.20:2087/api/v1`).
+
+- Only `/api/v1/*` (events included) and `/mcp` are reachable there, and only with the API key.
+- Scripts and Twitch connect stay on the game's PC: from another computer they answer `403`.
+- The link is plain http: fine on a home network. Over the internet, anyone on the way could read the key.
 
 ## REST API (`/api/v1`)
 
@@ -94,7 +107,7 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `deepFreeze` (a spreading freeze zone), `blizzard` (a Dust Storm over Mars, an Acid Storm over Venus, Supersonic Winds over Neptune), `solarFlare` (random picks it only Near the Sun) |
 | POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
 | GET | `/fields` | | `{ field, setting, fields: [{ id, name, pack, packName, owned }] }` |
-| POST | `/nukes` | `{ "by": "name" }` | A nuke near the fight, never on a team base: 3 s warning, then it vaporizes everything within 450 (`by`, optional: the pilot who gets its kills) |
+| POST | `/nukes` | `{ "by": "name" }` | A nuke missile to a random spot, never a team base: 3 s of flight, then it vaporizes everything within 1200, its shockwave damages and throws ships out to 2200 and an implosion drags them into the middle (`by`, optional: the pilot who gets its kills) |
 | GET | `/bosses` | | The bosses in the fight (`name`, `role`, `phase`: `warning` / `entering` / `fighting` / `leaving` / `down`, `hp`: `Good` / `Fair` / `Low` only, `shield`: `up` / `down`, `rage` ×1–6, `livesLeft` (Fleet Reserves encounters), `leavesIn` s (Factions encounters), `teaser`: a pack's name when it's a random pick from a pack the channel doesn't own) and every boss design (`name`, `role`, `entrance`, `pack`, `packName`, `owned`) |
 | POST | `/bosses` | `{ "boss": "Hydra" }` | Call a boss into the round now (a design name or `random` = an owned one): WARNING, its entrance, then it fights until shot down; at most 3 at once; a boss from a pack the channel doesn't own = 400 |
 | POST | `/bosses/pilot` | `{ "move": [1, 0], "aim": { "x": 900, "y": 400 }, "fire": true, "skill": 0 }` | The streamer's boss controls (BOSS mode, setting `bossPilots: "streamers"`): move x / y −1…1, aim = a world spot (turrets fire there while `fire`; abilities go after the pilot nearest it), `skill` = an ability slot to fire (on its cooldown). Send it while flying; 10 s without = the AI flies it |
@@ -120,7 +133,7 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 | POST | `/pilots` | `{ "username": "twitchlogin" }` | Put a viewer in the game (as `!join`) |
 | POST | `/pilots/:name/abilities` | `{ "ability": "missile" }` | `missile`, `shields`, `ram` (old name `boost` still works), `retreat`, `mine` (`mines` works too; drops one if charged) |
 | POST | `/pilots/:name/ult` | `{ "ult": "shockwave" }` (optional) | Fire the pilot's ultimate (as `!ult`): only with a full meter, after a round's first 15 s, while `ultimates` is on; `ult` = one of their unlocked ultimates to use for the rest of the round (else theirs). 400 when it can't fire |
-| POST | `/pilots/:name/ult/charge` | `{ "by": "name" }` (optional) | Fill the pilot's ult meter at once; the HUD says "ULT CHARGED BY NAME" |
+| POST | `/pilots/:name/ult/charge` | `{ "by": "name", "faction": true }` (both optional) | Fill the pilot's ult meter at once; the HUD says "ULT CHARGED BY NAME". `faction`: every pilot on that pilot's side too |
 | GET | `/effects` | | Every effect: `[{ id, label, needsPilot }]` |
 | POST | `/effects` | `{ "effect": "grow", "pilot": "name", "input": "", "by": "name" }` | (dev) Apply an effect, as if redeemed |
 
@@ -137,7 +150,7 @@ random one; each lasts `trailMinutes`. `missiles` = +3 missile charges, over the
 Effects with `needsPilot` need a `pilot` who is flying right now.
 
 Ultimates (ids for `ult`): free `overdrive`, `barrage`, `aegis`, `shockwave`, `blinkStrike`, `minefield`, `rally`,
-`sanctuary`; in the Ultimates pack (viewers who bought one, in a channel that owns the pack) `orbitalLance`,
+`sanctuary`; owned by the viewer (bought or unlocked with credits; bots and the streamer have all) `orbitalLance`,
 `pocketBlackHole`, `wingmen`, `hiveSwarm`, `confettiFireworks`, `cryoBomb`, `chainLightning`, `meteorCall`, `phantom`,
 `bladeStorm`, `titan`, `gravityWell`. A meter fills in ~75 s, faster from damage dealt and kills; a death keeps half.
 
@@ -305,7 +318,7 @@ Every event has `type` and `at` (ms timestamp).
 | `round.end` | `mode`, `result`, `stats` (`[{ id, name, login, bot, won, color, team, k, d, a, f, dmg, last }]`, best first; `dmg` = damage to bosses and their craft this round, BOSS mode sorts by it; `last` = bosses finished off), `teamNames`, `winnerTeam` (name or null), `bitLeaders` (`[{ name, bits }]`), `startedAt` |
 | `lobby` | `seconds` |
 | `calamity` | `calamity` (type), `name`, `by` (who launched it with Bits in the extension, or null) |
-| `nuke` | `by` (redeemer or null), `x`, `y`: a nuke is counting down there |
+| `nuke` | `by` (redeemer or null), `x`, `y`: a nuke missile is on its way there |
 | `boss.warning` | `boss`, `role`, `pack?` (a teaser: the pack it's from): the WARNING is up, a boss is coming |
 | `boss.spawned` | `boss`, `role`: its entrance is over, it fights |
 | `boss.rage` | `boss`, `rage` (×2–6): it got angrier (lower HP, or its shield broke) |
@@ -320,7 +333,7 @@ Every event has `type` and `at` (ms timestamp).
 | `redeem` | `title`, `rewardId`, `effect` (null: not a game redeem), `user`, `input` |
 | `effect` | `effect`, `pilot` (applied through the API); a Bits Field Change: `effect: "fieldChange"`, `field`, `by` |
 | `ult` | `pilot`, `id`, `ult` (id), `name`: a pilot fired their ultimate |
-| `ult.charged` | `pilot`, `by` (who paid, or null): a pilot's ult meter was filled at once |
+| `ult.charged` | `pilot`, `by` (who paid, or null), `pilots` (how many meters: more than 1 = the pilot's whole side): ult meters were filled at once |
 | `announce` | `text` |
 | `relay` | `entitlements` (connected to the relay: pack ids, `all` = every pack, and `rent:<boss>:<until>` = a boss unlocked for the channel until that epoch ms; `rent:*:<until>` = every boss), `packs` (the pack ids owned, rentals aside) |
 | `extension` | `from` (`role`, `userId`, `opaqueUserId`), `message` (a viewer's extension message) |
@@ -367,7 +380,7 @@ Streamable HTTP, stateless, same API key. Tools:
 | `test_cosmetics` (dev) | `kind?` (`trail` / `shield` / `explosion` / `laser`; none = all four) |
 | `use_ability` | `pilot`, `ability` |
 | `fire_ult` | `pilot`, `ult?` |
-| `charge_ult` | `pilot`, `by?` |
+| `charge_ult` | `pilot`, `by?`, `faction?` |
 | `add_pilot` | `username` |
 | `announce` | `text`, `color?`, `seconds?` |
 | `show_screen` | `screen`, `seconds?` |

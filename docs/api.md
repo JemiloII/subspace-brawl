@@ -11,13 +11,15 @@ serve one). Use the desktop app for bots and plugins.
 ## Versions
 
 The API is versioned on its own, separately from the game (game `0.9.x` until the Steam launch = `1.0.0`):
-- **API version** (now **1.9.0**): `GET /api/v1/version` → `{ "game": "0.19.0", "api": "1.9.0", "devTools": false }`
+- **API version** (now **1.10.0**): `GET /api/v1/version` → `{ "game": "0.21.0", "api": "1.10.0", "devTools": false }`
   (`devTools`: a dev build, see "Dev builds only" below); the MCP server reports
   it too. **Major** = the `/api/vN` path: a breaking change gets `/api/v2` (v1 keeps working for a while).
   **Minor** = something new (a route, a field, an MCP tool, an event). **Patch** = a fix or a docs correction.
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.10.0**: BRB mode: `POST /brb {on}` and MCP `set_brb`; `round.brb` (the on-screen text) and
+  `round.resultsCycle` while it's on; settings `brbText` and `brbShown`.
 - **1.9.0**: `POST /pilots/:name/ult/charge` and MCP `charge_ult` take `faction` (fills every meter on the pilot's
   side); event `ult.charged` adds `pilots`; `round.ultCalls` lines add `side`. Nukes are a missile to a random spot:
   `round.nukes` lines add `heading` + `range`, the blast and shockwave reach further.
@@ -123,8 +125,14 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 | POST | `/menu` | `{ "page": "modes" }` (optional) | Back to the title screen, or to that menu screen (a round in progress stops; pilots stay joined) |
 | POST | `/lobby` | `{ "mode": "ffa" }` | From the title screen: open that mode's lobby. In a lobby or round: swap the next mode, pilots stay |
 | POST | `/menu/page` | `{ "page": "boards" }` | Show a screen: `main` (title), `modes`, `boards`, `credits`; `null` closes it |
+| POST | `/brb` | `{ "on": true }` | BRB mode: rounds run on their own while the streamer is away (see below) → `{ brb }` |
 
 `round.phase` is `menu`, `lobby` or `playing`; `round.overlay.menu` is the open page (or null).
+
+BRB mode (off again when the game restarts): from the title screen it opens the lobby; every lobby counts down on its own; the results stay
+up for half the countdown, flipping through the boards (`round.resultsCycle` `{ board, page }`); the field is random,
+teams are auto and nobody picks a team (the saved settings stay); the AI flies the streamer's ship and boss.
+`round.brb` is there only while BRB is on: the setting `brbText`, or `""` when `brbShown` is off.
 
 ### Pilots and effects
 

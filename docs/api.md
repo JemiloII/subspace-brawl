@@ -18,6 +18,10 @@ The API is versioned on its own, separately from the game (game `0.9.x` until th
 - Everything below documents the current version; each change gets a line in the changelog.
 
 ### Changelog
+- **1.11.0**: `round.ultCalls` is gone: a fired or charged ult is a `round.killFeed` row with `u` (`fired`,
+  `charged`, `side`), `v` = the pilot, `n` = the ult id, `k` = the viewer who paid. Overlay mode: `POST /lobby`
+  `{"mode":"overlay"}`, settings `overlay`, `overlayAuto`, `overlayCommands`, `overlayCamera`, `overlayHudScale`;
+  snapshot `round.commandLine`, `round.hudScale`; the field `overlay` is no longer a `field` value.
 - **1.10.0**: BRB mode: `POST /brb {on}` and MCP `set_brb`; `round.brb` (the on-screen text) and
   `round.resultsCycle` while it's on; settings `brbText` and `brbShown`.
 - **1.9.0**: `POST /pilots/:name/ult/charge` and MCP `charge_ult` take `faction` (fills every meter on the pilot's
@@ -71,7 +75,7 @@ network address, same port (the menu shows the link, e.g. `http://192.168.1.20:2
 Request and response bodies are JSON.
 
 **Content packs.** Bosses and fields come in packs: the free base game (Leviathan, Crimson Manta, Iron Bastion,
-Lumen Spire; Deep Space, Earth, Lunar Surface, Ceres, Pluto, 67P, Vesta, 'Oumuamua), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
+Lumen Spire; Deep Space, Earth, Lunar Surface, Ceres, Pluto, 67P, Vesta, Oumuamua), **Boss Pack 1** (`bossPack1`: Hive Mother, Hydra, Widow,
 Magnetar), **Boss Pack 2** (`bossPack2`: Singularity, Phantom, Seraph, Maelstrom), **Inner Sol System** (`arenaPack`: Near
 the Sun, Mercury, Venus, Mars), **Gas Giants** (`arenaPack2`: Jupiter, Saturn's Rings, Over
 Uranus, Neptune), **Moons of Jupiter** (`moonsPack`: Io, Europa, Ganymede, Callisto), **Moons of Saturn** (`saturnMoonsPack`: Titan, Enceladus, Mimas, Iapetus). Picking a boss or field from a pack the channel doesn't own
@@ -107,7 +111,7 @@ contain them: they answer 404 (MCP: the tool isn't listed). `GET /version` says 
 | POST | `/music/beat` | `{bpm, beatAt}` (`{}` = no music) | The host window's music beat (`beatAt` = wall-clock ms of a beat); every view's notes shield pulses to it (`round.overlay.music`, null after 75 s unrefreshed) |
 | POST | `/results/close` | | After a round: close the results board (it stays up until this) and show the lobby |
 | POST | `/calamities` | `{ "type": "random" }` | `random`, `meteorShower`, `iceStorm` (Ice Shower), `thunderStorm`, `blackHole`, `radiationLeak`, `deepFreeze` (a spreading freeze zone), `blizzard` (a Dust Storm over Mars, an Acid Storm over Venus, Supersonic Winds over Neptune), `solarFlare` (random picks it only Near the Sun) |
-| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `overlay` (no sky: a transparent page for an OBS Browser Source over the stream, picked only by hand, never by `random` or a viewer, and no viewer Field Change while it's on), `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
+| POST | `/field` | `{ "field": "earth" }` | `random` or a field (`deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`): saved as the `field` setting, and mid-round the field changes right away (the rocks are swapped for the new field's) → `{ field, setting }`; a field from a pack the channel doesn't own = 400 |
 | GET | `/fields` | | `{ field, setting, fields: [{ id, name, pack, packName, owned }] }` |
 | POST | `/nukes` | `{ "by": "name" }` | A nuke missile to a random spot, never a team base: 3 s of flight, then it vaporizes everything within 1200, its shockwave damages and throws ships out to 2200 and an implosion drags them into the middle (`by`, optional: the pilot who gets its kills) |
 | GET | `/bosses` | | The bosses in the fight (`name`, `role`, `phase`: `warning` / `entering` / `fighting` / `leaving` / `down`, `hp`: `Good` / `Fair` / `Low` only, `shield`: `up` / `down`, `rage` ×1–6, `livesLeft` (Fleet Reserves encounters), `leavesIn` s (Factions encounters), `teaser`: a pack's name when it's a random pick from a pack the channel doesn't own) and every boss design (`name`, `role`, `entrance`, `pack`, `packName`, `owned`) |
@@ -123,7 +127,7 @@ The game starts on its title screen. Menu pages show on every game view (desktop
 | Method | Path | Body | Does |
 |---|---|---|---|
 | POST | `/menu` | `{ "page": "modes" }` (optional) | Back to the title screen, or to that menu screen (a round in progress stops; pilots stay joined) |
-| POST | `/lobby` | `{ "mode": "ffa" }` | From the title screen: open that mode's lobby. In a lobby or round: swap the next mode, pilots stay |
+| POST | `/lobby` | `{ "mode": "ffa" }` | From the title screen: open that mode's lobby. In a lobby or round: swap the next mode, pilots stay. `overlay` = Overlay mode: its current fight (`mode`) on a see-through field for an OBS Browser Source, almost nothing on screen, results close by themselves; the broadcaster's chat `!space battle`, `!space battle ffa`, `!space boss` starts an idle Overlay lobby's countdown |
 | POST | `/menu/page` | `{ "page": "boards" }` | Show a screen: `main` (title), `modes`, `boards`, `credits`; `null` closes it |
 | POST | `/brb` | `{ "on": true }` | BRB mode: rounds run on their own while the streamer is away (see below) → `{ brb }` |
 
@@ -264,9 +268,7 @@ when the setting is `random`; also `lobby.field`).
 `round.rentals` (left out while empty) = bosses unlocked for the channel for 24 h (a Bits summon or a beaten teaser):
 `{ "<boss name>": <until, epoch ms> }`, key `*` = every boss. `round.unlocked` (the results only) = the teasers the
 pilots beat this round, now unlocked.
-`round.ultimates` = the setting; `round.ultCalls` (left out while none) = the big HUD lines of the last 2.6 s:
-`[{ id, u, n, c, t, by? }]` (`u` = index into the ultimate ids above, `n` = pilot, `c` = their color, `t` = ms ago,
-`by` = who paid for an Ult Charge). A pilot's `ult` is this round's ultimate, `ultMeter` 0–1.
+`round.ultimates` = the setting; a fired or charged ult shows as a `round.killFeed` row with `u`. A pilot's `ult` is this round's ultimate, `ultMeter` 0–1.
 A pilot's `ship` is its ship's key : `spaceShips_001.png`…`spaceShips_008.png` for
 the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 
@@ -296,6 +298,12 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `streamerJoins` | boolean (the streamer's ship joins every lobby, default on) |
 | `camera` | `auto`, `map`, `zoom` |
 | `cameraZoom` | 0.1–2 |
+| `autoRounds` | boolean (default off): every mode but Overlay counts its lobby down and closes its results by itself |
+| `overlay` | boolean: Overlay mode (`POST /lobby {"mode":"overlay"}` turns it on, any other mode off); `mode` is its fight |
+| `overlayAuto` | boolean (Overlay mode's lobbies count down by themselves, default on; its results always close by themselves) |
+| `overlayCommands` | `off` (default), `top`, `bottom`: Overlay mode's commands line |
+| `overlayCamera` | `auto`, `map`, `zoom`: Overlay mode's camera |
+| `overlayHudScale` | 50–150 (% of normal): Overlay mode's HUD size |
 | `scoreboard` | `left`, `right` |
 | `lobbySide` | `left`, `right` (the lobby's settings column; MENU takes the other side) |
 | `language` | `""` (default: the system's language) or a language code from `content/data/languages.ts` (`es`, `ja`, `he`...): the game's text on the host and every view |
@@ -304,7 +312,7 @@ the 8 originals, a name like `lancer` or `valkyrie` for the newer ones.
 | `pieOffsetX`, `pieOffsetY` | -2000–2000 |
 | `calamities` | boolean (natural calamities) |
 | `season` | `auto` (default: by the server's date, Halloween Sep 24 – Nov 7, Christmas Nov 24 – Jan 7, Chinese New Year from 7 days before the Lunar New Year to the Lantern Festival, by a table of dates through 2050), `off`, `halloween`, `christmas`, `chineseNewYear` (forced on) |
-| `field` | `random` (default: a different field every round) or `deepSpace`, `overlay`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
+| `field` | `random` (default: a different field every round) or `deepSpace`, `earth`, `moon`, `mercury`, `venus`, `mars`, `ceres`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `sun`, `io`, `europa`, `ganymede`, `callisto`, `titan`, `enceladus`, `mimas`, `iapetus`, `comet`, `vesta`, `oumuamua`. Between rounds a change shows at once; mid-round it applies next round (`POST /field` switches now) |
 | `fieldPool` | Field ids `random` rolls from (`[]` = default: every owned field). Unowned ids are skipped; none owned = every owned field; a narrowed pool never rolls a DLC teaser |
 | `missileFriendlyFire` | boolean |
 | `ultimates` | boolean, default on: ult meters, `!ult`, the extension's ult controls and Ult Charges |
